@@ -30,18 +30,18 @@ public class RouterTable {
 			RouterInfo info = new RouterInfo();
 			info.id = Long.parseLong(strLine[0]);
 			info.port = Integer.parseInt(strLine[1]);
-			
-			String[] split = strLine[2].split(".");
+
+			String[] split = strLine[2].split("\\.");
 			byte[] bytedIP = new byte[4];
-			for(int  i = 0; i < split.length; i++) {
-				bytedIP[i] = (byte) Integer.parseInt(split[i]); 
+			for (int i = 0; i < split.length; i++) {
+				bytedIP[i] = (byte) Integer.parseInt(split[i]);
 			}
 			info.ipAddress = InetAddress.getByAddress(bytedIP);
 			routers.put(info.id, info);
 		}
 		buf.close();
 	}
-	
+
 	public RouterInfo getInfo(long id) {
 		return routers.get(id);
 	}
