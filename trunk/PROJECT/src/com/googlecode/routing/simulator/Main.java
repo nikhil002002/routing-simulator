@@ -44,14 +44,11 @@ public class Main {
 		Set<LinkInfo> links = linkTable.getLinksForRouter(id);
 		Set<RouterInfo> adjacentRouters = new HashSet<RouterInfo>();
 		for (LinkInfo info : links) {
-			if (info.routerAID == id) {
-				adjacentRouters.add(routerTable.getInfo(info.routerBID));
-			} else {
-				adjacentRouters.add(routerTable.getInfo(info.routerAID));
-			}
+			adjacentRouters.add(routerTable.getInfo(info.routerAID == id ? info.routerBID : info.routerAID));
 		}
 
-		Router router = new Router(id, adjacentRouters, links);
+		Router router = new Router(routerTable.getInfo(id), adjacentRouters, links);
+		router.initSocket();
 		router.startRouting();
 	}
 }

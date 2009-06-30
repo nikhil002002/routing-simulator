@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,7 +30,13 @@ public class RouterTable {
 			RouterInfo info = new RouterInfo();
 			info.id = Long.parseLong(strLine[0]);
 			info.port = Integer.parseInt(strLine[1]);
-			info.ipAddress = strLine[2];
+			
+			String[] split = strLine[2].split(".");
+			byte[] bytedIP = new byte[4];
+			for(int  i = 0; i < split.length; i++) {
+				bytedIP[i] = (byte) Integer.parseInt(split[i]); 
+			}
+			info.ipAddress = InetAddress.getByAddress(bytedIP);
 			routers.put(info.id, info);
 		}
 		buf.close();
