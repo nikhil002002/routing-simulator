@@ -13,7 +13,7 @@ public class Main {
 
 	public static final String ROTEADOR_CONFIG_DIR = "resources/roteador.config";
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, InterruptedException {
 
 		if (args.length < 1) {
 			System.err.println("USAGE: <router_id>");
@@ -47,8 +47,16 @@ public class Main {
 			adjacentRouters.add(routerTable.getInfo(info.routerAID == id ? info.routerBID : info.routerAID));
 		}
 
+		
 		Router router = new Router(routerTable.getInfo(id), adjacentRouters, links);
 		router.initSocket();
+		new ListenerThread(router).start();
+		
 		router.startRouting();
+		
+		
+		
+		
+		
 	}
 }
