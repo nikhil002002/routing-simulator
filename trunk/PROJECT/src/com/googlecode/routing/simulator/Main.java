@@ -51,12 +51,9 @@ public class Main {
 		Router router = new Router(routerTable.getInfo(id), adjacentRouters, links);
 		router.initSocket();
 		new ListenerThread(router).start();
-		
+		new NeighborsMonitorThread(router).start();
+
 		router.startRouting();
-		
-		
-		
-		
 		
 	}
 }

@@ -61,64 +61,102 @@ public class Router {
 	}
 	
 	public void listen() throws IOException {
+		
 		byte[] receiveData = new byte[1024]; 
 		DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length); 
 		serverSocket.receive(receivePacket);
 		
 		InetAddress senderIpAddress = receivePacket.getAddress();
 		int senderPort = receivePacket.getPort();
+		
 		double cost=0;
 		RouterInfo gateway = null;
 		
 		Map<Long, PathInfo> receivedMap = Router.deserialize(receivePacket.getData());
 		
 		for(RouterInfo r: adjacentRouters) {
-			if(r.ipAddress.equals(senderIpAddress) && r.port == senderPort) {
-				PathInfo actualPathInfo = minimumPathTable.get(r.id);
-				if(actualPathInfo == null) {
+			
+			if(r.ipAddress.equals(senderIpAddress) && r.port == senderPort) { //identify the sender
+				PathInfo actualPathInfo = minimumPathTable.get(r.id); //Info about the link to the sender
+				
+				if(actualPathInfo == null) { //If there's no link
+					
 					actualPathInfo = new PathInfo();
 					actualPathInfo.destinationRouterID = r.id;
 					actualPathInfo.gatewayRouterID = r.id;
-					actualPathInfo.cost = receivedMap.get(
-							this.routerInfo.id)
-							.cost;
+					actualPathInfo.cost = receivedMap.get(routerInfo.id).cost;
 					
-					minimumPathTable.put(r.id, actualPathInfo);
+					minimumPathTable.put(r.id, actualPathInfo); //creates a link
 				}
-				cost = actualPathInfo.cost;
-					
-				gateway = r;
+				cost = actualPathInfo.cost; //cost of this link
+				gateway = r; // stores the sender for future usage
+				
 				System.out.println("["+this.routerInfo.id + "]: Recebi de "+r.id);
 				
-				lastPing.put(r.id, System.currentTimeMillis());
+				lastPing.put(r.id, System.currentTimeMillis()); //Mark PING from the sender
 				
 			}
 		}
 		
 		for(Long id: receivedMap.keySet()) {
+			
 			PathInfo receivedPathInfo = receivedMap.get(id);
 			PathInfo actualPathInfo = minimumPathTable.get(id);
-			if(actualPathInfo == null || receivedPathInfo.cost + cost < actualPathInfo.cost || receivedPathInfo.cost == UNAVAILABLE ^ actualPathInfo.cost == UNAVAILABLE) {
-				if(actualPathInfo == null) { 
+			
+			if(receivedPathInfo.destinationRouterID == routerInfo.id) { //If the target router is this one
+				if(receivedPathInfo.cost == UNAVAILABLE) continue; //If the other router thinks I'm off, disconsider
+				receivedPathInfo.destinationRouterID = gateway.id; //reverse to have the sender as the destination router
+				receivedPathInfo.gatewayRouterID = gateway.id; //reverse to have the sender as the gateway
+				
+			}
+			
+			if(actualPathInfo == null || 
+					receivedPathInfo.cost == UNAVAILABLE ^ actualPathInfo.cost == UNAVAILABLE ||
+					 receivedPathInfo.cost + cost < actualPathInfo.cost	) { //If i don't have a link to this node, or the availability is different from what i have or the cost is lower
+			
+				if(actualPathInfo == null) { //If i don't have a link
 					actualPathInfo = new PathInfo();
 					actualPathInfo.destinationRouterID = receivedPathInfo.destinationRouterID;
+					actualPathInfo.cost = receivedPathInfo.cost;
 				}
-				System.out.println("["+this.routerInfo.id + "]: Houveram mudanças na minha tabela ");
-				System.out.println("["+this.routerInfo.id + "]: O custo para "+actualPathInfo.destinationRouterID+ " era "+actualPathInfo.cost +
-						" e agora eh "+ (receivedPathInfo.cost + cost));
-				if(receivedPathInfo.cost == UNAVAILABLE) {
+				double previousCost = actualPathInfo.cost;
+				
+				if(receivedPathInfo.cost == UNAVAILABLE && actualPathInfo.cost != UNAVAILABLE) {
 					actualPathInfo.cost = UNAVAILABLE;
 					System.out.println("Fui avisado pelo roteador ["+gateway.id+"] que o roteador ["+actualPathInfo.destinationRouterID + "] estah indisponivel" );
-				} else {
+				} else if (actualPathInfo.cost != UNAVAILABLE) {
 					actualPathInfo.cost = receivedPathInfo.cost + cost;
+				}
+				
+				if(previousCost != actualPathInfo.cost) {	
+					System.out.println("["+this.routerInfo.id + "]: Houveram mudanças na minha tabela ");
+					System.out.println("["+this.routerInfo.id + "]: O custo para "+actualPathInfo.destinationRouterID+ " era "+ previousCost +
+							" e agora eh "+ (actualPathInfo.cost));
+					
 				}
 				actualPathInfo.gatewayRouterID = gateway.id;
 				
 				minimumPathTable.put(id, actualPathInfo);
+				printTable();
 			}
 		}
 		
 		
+		
+		
+		
+	}
+
+	private void printTable() {
+		System.out.println("| ID |  GATEWAY |  COST  |");
+		for (Entry<Long,PathInfo> entry : minimumPathTable.entrySet()) {
+			System.out.println("| "+entry.getKey()+" |  "+entry.getValue().gatewayRouterID+" |  "+entry.getValue().cost+"  |");
+			
+		}
+		System.out.println();
+	}
+
+	public void verifyNeighbors() {
 		for (Entry<Long,Long> e : lastPing.entrySet()) {
 			if(System.currentTimeMillis() - e.getValue() > 5*SLEEP_TIME && minimumPathTable.get(e.getKey()).cost != UNAVAILABLE) {
 				minimumPathTable.get(e.getKey()).cost = UNAVAILABLE;
@@ -126,8 +164,6 @@ public class Router {
 			}
 			
 		}
-		
-		
 	}
 
 	public static byte[] serialize(Map<Long, PathInfo> map) {
