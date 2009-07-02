@@ -1,5 +1,6 @@
 package com.googlecode.routing.simulator;
 
+import java.io.PrintStream;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
@@ -8,6 +9,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 
 /**
  * @author Renato Miceli
@@ -18,20 +20,23 @@ public class Router {
 	public static final long SLEEP_TIME = 4000;
 	public final Map<Long, PathInfo> minimumPathTable;
 	public final RouterInfo routerInfo;
-	private final Set<LinkInfo> links;
+	public final Set<LinkInfo> links;
 	public final Set<RouterInfo> adjacentRouters;
 	public Map<Long, Long> lastPing = new HashMap<Long, Long>();
 	private final double networkDiameter;
+	
+	public final PrintStream out;
 
 	public DatagramSocket serverSocket;
 
-	public Router(RouterInfo routerInfo, Set<RouterInfo> adjacentRouters, Set<LinkInfo> links, double maxCountToInfinity) {
+	public Router(RouterInfo routerInfo, Set<RouterInfo> adjacentRouters, Set<LinkInfo> links, PrintStream out, double maxCountToInfinity) {
 
 		this.routerInfo = routerInfo;
 		this.adjacentRouters = adjacentRouters;
 		this.links = links;
 		this.minimumPathTable = new HashMap<Long, PathInfo>();
 		this.networkDiameter = maxCountToInfinity;
+		this.out = out;
 
 		for (LinkInfo info : links) {
 			PathInfo path = new PathInfo();
@@ -40,6 +45,8 @@ public class Router {
 			path.gatewayRouterID = path.destinationRouterID;
 			minimumPathTable.put(path.destinationRouterID, path);
 		}
+		
+		this.printDistanceTable();
 	}
 
 	public void initSocket() throws SocketException, UnknownHostException {
@@ -54,6 +61,14 @@ public class Router {
 			}
 		}
 		return null;
+	}
+	
+	public void printDistanceTable() {
+		out.println("| ID |  GATEWAY |  COST  |");
+		for (Entry<Long, PathInfo> entry : minimumPathTable.entrySet()) {
+			out.println("| " + entry.getKey() + " |  " + entry.getValue().gatewayRouterID + " |  " + entry.getValue().cost + "  |");
+		}
+		out.println();
 	}
 
 	public static byte[] serialize(Map<Long, PathInfo> map) {

@@ -45,74 +45,70 @@ public class RouterServer implements Runnable {
 					pathToSender = new PathInfo();
 					pathToSender.destinationRouterID = info.id;
 					pathToSender.gatewayRouterID = info.id;
-					// FIXME: the minimum distance to reach me might not be
-					// through the direct link
-					pathToSender.cost = receivedMap.get(router.routerInfo.id).cost;
+					double thisCost = Double.MAX_VALUE;
+					for (LinkInfo linkInfo : router.links) {
+						if (linkInfo.routerAID == router.routerInfo.id || linkInfo.routerBID == router.routerInfo.id) {
+							thisCost = linkInfo.cost;
+							break;
+						}
+					}
+					pathToSender.cost = Math.min(thisCost, receivedMap.get(router.routerInfo.id).cost);
 					router.minimumPathTable.put(info.id, pathToSender);
 				} else {
 					pathToSender = router.minimumPathTable.get(info.id);
 				}
 			}
 
-			// cost of this link
 			double cost = pathToSender.cost;
 
-			System.out.println("[" + router.routerInfo.id + "]: Recebi de " + info.id);
+			router.out.println("[" + router.routerInfo.id + "]: Recebi de " + info.id);
 
 			updatePingTable(info.id);
 
-			for (Long id : receivedMap.keySet()) {
+			boolean changed = false;
+			for (Entry<Long, PathInfo> entry : receivedMap.entrySet()) {
 
-				PathInfo receivedPathInfo = receivedMap.get(id);
-				PathInfo actualPathInfo = router.minimumPathTable.get(id);
+				long id = entry.getKey();
+				PathInfo receivedPathInfo = entry.getValue();
 
-				// If the target router is this one
+				router.out.println(receivedPathInfo);
+
 				if (receivedPathInfo.destinationRouterID == router.routerInfo.id) {
-
-					// If the other router thinks I'm off, disconsider
-					if (receivedPathInfo.cost == Router.UNAVAILABLE)
-						continue;
-
-					// reverse to have the sender as the destination router
-					receivedPathInfo.destinationRouterID = info.id;
-					// reverse to have the sender as the gateway
-					receivedPathInfo.gatewayRouterID = info.id;
+					continue;
 				}
 
-				// If i don't have a link to this node, or the availability is
-				// different from what i have or the cost is lower
-				if (actualPathInfo == null || receivedPathInfo.cost == Router.UNAVAILABLE ^ actualPathInfo.cost == Router.UNAVAILABLE
-						|| receivedPathInfo.cost + cost < actualPathInfo.cost) {
-
-					// If i don't have a link
-					if (actualPathInfo == null) {
-						actualPathInfo = new PathInfo();
-						actualPathInfo.destinationRouterID = receivedPathInfo.destinationRouterID;
-						actualPathInfo.cost = receivedPathInfo.cost;
+				PathInfo actualPathInfo;
+				synchronized (router.minimumPathTable) {
+					actualPathInfo = router.minimumPathTable.get(id);
+				}
+				if (actualPathInfo == null) {
+					actualPathInfo = new PathInfo();
+					actualPathInfo.destinationRouterID = receivedPathInfo.destinationRouterID;
+					actualPathInfo.cost = receivedPathInfo.cost + cost;
+					actualPathInfo.gatewayRouterID = info.id;
+					synchronized (router.minimumPathTable) {
+						router.minimumPathTable.put(id, actualPathInfo);
 					}
+					changed = true;
+				} else if (receivedPathInfo.cost != Double.MAX_VALUE && receivedPathInfo.cost + cost < actualPathInfo.cost) {
+
 					double previousCost = actualPathInfo.cost;
-
-					if (receivedPathInfo.cost == Router.UNAVAILABLE && actualPathInfo.cost != Router.UNAVAILABLE) {
-						actualPathInfo.cost = Router.UNAVAILABLE;
-						System.out.println("Fui avisado pelo roteador [" + info.id + "] que o roteador [" + actualPathInfo.destinationRouterID
-								+ "] estah indisponivel");
-					} else if (actualPathInfo.cost != Router.UNAVAILABLE) {
-						actualPathInfo.cost = receivedPathInfo.cost + cost;
-					}
-
-					if (previousCost != actualPathInfo.cost) {
-						System.out.println("[" + router.routerInfo.id + "]: Houveram mudanças na minha tabela ");
-						System.out.println("[" + router.routerInfo.id + "]: O custo para " + actualPathInfo.destinationRouterID + " era "
-								+ previousCost + " e agora eh " + (actualPathInfo.cost));
-
-					}
+					actualPathInfo.cost = receivedPathInfo.cost + cost;
 					actualPathInfo.gatewayRouterID = info.id;
 
-					router.minimumPathTable.put(id, actualPathInfo);
-					printTable();
+					router.out.println("[" + router.routerInfo.id + "]: Houveram mudanças na minha tabela ");
+					router.out.println("[" + router.routerInfo.id + "]: O custo para " + actualPathInfo.destinationRouterID + " era " + previousCost
+							+ " e agora eh " + (actualPathInfo.cost));
+
+					changed = true;
 				}
 			}
+
+			if (changed) {
+				router.printDistanceTable();
+			}
 		}
+
 	}
 
 	private DatagramPacket receiveData() throws IOException {
@@ -126,14 +122,6 @@ public class RouterServer implements Runnable {
 		synchronized (router.lastPing) {
 			router.lastPing.put(routerID, System.currentTimeMillis());
 		}
-	}
-
-	private void printTable() {
-		System.out.println("| ID |  GATEWAY |  COST  |");
-		for (Entry<Long, PathInfo> entry : router.minimumPathTable.entrySet()) {
-			System.out.println("| " + entry.getKey() + " |  " + entry.getValue().gatewayRouterID + " |  " + entry.getValue().cost + "  |");
-		}
-		System.out.println();
 	}
 
 }

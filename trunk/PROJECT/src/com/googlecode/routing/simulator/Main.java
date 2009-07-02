@@ -48,7 +48,8 @@ public class Main {
 			adjacentRouters.add(routerTable.getInfo(info.routerAID == id ? info.routerBID : info.routerAID));
 		}
 
-		Router router = new Router(currentRouterInfo, adjacentRouters, links, (routerTable.getNumberOfRouters() - 1) * linkTable.getMaxCost());
+		Router router = new Router(currentRouterInfo, adjacentRouters, links, System.out, (routerTable.getNumberOfRouters() - 1)
+				* linkTable.getMaxCost());
 		router.initSocket();
 
 		new Thread(new RouterServer(router)).start();
