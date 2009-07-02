@@ -57,12 +57,11 @@ public class RouterServer implements Runnable {
 					router.minimumPathTable.put(info.id, pathToSender);
 				} else {
 					pathToSender = router.minimumPathTable.get(info.id);
+					pathToSender.cost = Math.min(pathToSender.cost, receivedMap.get(router.routerInfo.id).cost);
 				}
 			}
 
 			double cost = pathToSender.cost;
-
-			router.out.println("[" + router.routerInfo.id + "]: Recebi de " + info.id);
 
 			updatePingTable(info.id);
 
@@ -81,12 +80,6 @@ public class RouterServer implements Runnable {
 					actualPathInfo = router.minimumPathTable.get(id);
 				}
 				
-				if(actualPathInfo == null || (cost + receivedPathInfo.cost != actualPathInfo.cost && receivedPathInfo.cost != actualPathInfo.cost)) {
-					System.out.print("RECEBI QUE ["+ id+ "] AGORA TEM CUSTO "+	(cost + receivedPathInfo.cost)+", EU TINHA COMO ");
-					if(actualPathInfo==null) System.out.println("NULL");
-					else System.out.println(actualPathInfo.cost);
-				}
-				
 				if (actualPathInfo == null) {
 					actualPathInfo = new PathInfo();
 					actualPathInfo.destinationRouterID = receivedPathInfo.destinationRouterID;
@@ -96,9 +89,10 @@ public class RouterServer implements Runnable {
 						router.minimumPathTable.put(id, actualPathInfo);
 					}
 					changed = true;
-					System.out.println("Acrescentei nó ["+ receivedPathInfo.destinationRouterID+ "]");
-				} else if(receivedPathInfo.cost == Router.UNAVAILABLE && actualPathInfo.cost != Router.UNAVAILABLE) {
-					System.out.println("RECEBI QUE ["+ id+ "] caiu");
+					router.out.println("["+router.routerInfo.id+"] Acrescentei nó ["+ receivedPathInfo.destinationRouterID+ "]");
+				} else if(receivedPathInfo.cost == Router.UNAVAILABLE && actualPathInfo.cost != Router.UNAVAILABLE && 
+						(receivedPathInfo.gatewayRouterID == actualPathInfo.gatewayRouterID || actualPathInfo.gatewayRouterID == info.id )) {
+					router.out.println("["+router.routerInfo.id+"] RECEBI QUE ["+ id+ "] caiu");
 					actualPathInfo.cost = Router.UNAVAILABLE;
 					changed = true;
 					
@@ -108,8 +102,9 @@ public class RouterServer implements Runnable {
 					actualPathInfo.cost = receivedPathInfo.cost + cost;
 					actualPathInfo.gatewayRouterID = info.id;
 
-					router.out.println("[" + router.routerInfo.id + "]: Houveram mudan�as na minha tabela ");
-					router.out.println("[" + router.routerInfo.id + "]: O custo para " + actualPathInfo.destinationRouterID + " era " + previousCost
+					router.out.println("[" + router.routerInfo.id + "]: Houveram mudanças na minha tabela ");
+					router.out.println("[" + router.routerInfo.id + "]: O custo para " + actualPathInfo.destinationRouterID + " era " + 
+							(previousCost == Router.UNAVAILABLE ? "N/A":previousCost)
 							+ " e agora eh " + (actualPathInfo.cost));
 
 					changed = true;
@@ -122,6 +117,7 @@ public class RouterServer implements Runnable {
 		}
 
 	}
+
 
 	private DatagramPacket receiveData() throws IOException {
 		byte[] receiveData = new byte[1024];

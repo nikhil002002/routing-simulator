@@ -63,6 +63,16 @@ public class Router {
 		return null;
 	}
 	
+	public void disableUnreachableRouters(long id) {
+		synchronized (minimumPathTable) {
+			for (PathInfo pathInfo : minimumPathTable.values()) {
+				if(pathInfo.gatewayRouterID == id) {
+					pathInfo.cost = Router.UNAVAILABLE;
+				}
+			}
+		}
+	}
+	
 	public void printDistanceTable() {
 		out.println("| ID |  GATEWAY |  COST  |");
 		for (Entry<Long, PathInfo> entry : minimumPathTable.entrySet()) {

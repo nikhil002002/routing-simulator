@@ -26,11 +26,12 @@ public class RouterClient implements Runnable {
 		while (true) {
 
 			try {
+				this.checkNeighborsTimeout();
 				this.sendDistanceVectorToNeighbors();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			this.checkNeighborsTimeout();
+			
 
 			try {
 				Thread.sleep(Router.SLEEP_TIME);
@@ -48,12 +49,12 @@ public class RouterClient implements Runnable {
 		}
 		for (RouterInfo routerInfo : router.adjacentRouters) {
 			DatagramPacket sendPacket = new DatagramPacket(byteMap, byteMap.length, routerInfo.ipAddress, routerInfo.port);
-			router.out.println("Enviando para " + routerInfo.ipAddress + ":" + routerInfo.port);
+//			router.out.println("Enviando para " + routerInfo.ipAddress + ":" + routerInfo.port);
 			router.serverSocket.send(sendPacket);
 		}
 	}
 
-	private void checkNeighborsTimeout() {
+	private void checkNeighborsTimeout() throws IOException {
 
 		long currentTime = System.currentTimeMillis();
 
@@ -72,6 +73,7 @@ public class RouterClient implements Runnable {
 						router.out.println("[" + router.routerInfo.id + "] Timeout para resposta do roteador [" + e.getKey()
 								+ "] atingido, marcando como indisponivel");
 						changed = true;
+						router.disableUnreachableRouters(e.getKey());
 					}
 				}
 			}
