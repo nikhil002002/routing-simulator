@@ -64,10 +64,11 @@ public class RouterClient implements Runnable {
 		
 		boolean changed = false;
 		for (Entry<Long, Long> e : set) {
-			if (currentTime - e.getValue() > 5 * Router.SLEEP_TIME) {
+			if (e.getValue() > 0 && currentTime - e.getValue() > 5 * Router.SLEEP_TIME) {
 				synchronized (router.minimumPathTable) {
 					if (router.minimumPathTable.get(e.getKey()).cost != Double.MAX_VALUE) {
 						router.minimumPathTable.get(e.getKey()).cost = Double.MAX_VALUE;
+						e.setValue(0L);
 						router.out.println("[" + router.routerInfo.id + "] Timeout para resposta do roteador [" + e.getKey()
 								+ "] atingido, marcando como indisponivel");
 						changed = true;
