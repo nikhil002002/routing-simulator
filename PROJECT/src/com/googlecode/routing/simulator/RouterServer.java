@@ -71,8 +71,6 @@ public class RouterServer implements Runnable {
 				long id = entry.getKey();
 				PathInfo receivedPathInfo = entry.getValue();
 
-				router.out.println(receivedPathInfo);
-
 				if (receivedPathInfo.destinationRouterID == router.routerInfo.id) {
 					continue;
 				}
