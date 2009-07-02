@@ -1,13 +1,12 @@
-/**
- * 
- */
 package com.googlecode.routing.simulator;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -38,24 +37,24 @@ public class LinkTable {
 		buf.close();
 	}
 
-	public Set<LinkInfo> getLinksForRouter(long routerID) {
-		Set<LinkInfo> result = new HashSet<LinkInfo>();
+	public Map<Long, LinkInfo> getLinksForRouter(long routerID) {
+		Map<Long, LinkInfo> result = new HashMap<Long, LinkInfo>();
 		for (LinkInfo info : links) {
-			if (info.routerAID == routerID || info.routerBID == routerID) {
-				result.add(info);
+			if (info.routerAID == routerID) {
+				result.put(info.routerBID, info);
+			} else if (info.routerBID == routerID) {
+				result.put(info.routerAID, info);
 			}
 		}
 		return result;
 	}
-	
-	public double getMaxCost() {
-		double dist = 0;
-		for(LinkInfo link : links) {
-			if(link.cost > dist) {
-				dist = link.cost;
-			}
+
+	public double getCostsSum() {
+		double maxDist = 0;
+		for (LinkInfo info : links) {
+			maxDist += info.cost;
 		}
-		return dist;
+		return maxDist;
 	}
 
 }

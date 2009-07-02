@@ -45,9 +45,5 @@ public class RouterTable {
 	public RouterInfo getInfo(long id) {
 		return routers.get(id);
 	}
-	
-	public int getNumberOfRouters() {
-		return routers.size();
-	}
 
 }
