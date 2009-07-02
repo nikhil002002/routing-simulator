@@ -33,7 +33,8 @@ public class Main {
 		RouterTable routerTable = new RouterTable(ROTEADOR_CONFIG_DIR);
 		routerTable.parseConfigFile();
 
-		if (routerTable.getInfo(id) == null) {
+		RouterInfo currentRouterInfo = routerTable.getInfo(id);
+		if (currentRouterInfo == null) {
 			System.err.println("No configuration was found for the given router ID <" + id + ">!");
 			System.exit(3);
 		}
@@ -47,13 +48,10 @@ public class Main {
 			adjacentRouters.add(routerTable.getInfo(info.routerAID == id ? info.routerBID : info.routerAID));
 		}
 
-		
-		Router router = new Router(routerTable.getInfo(id), adjacentRouters, links);
+		Router router = new Router(currentRouterInfo, adjacentRouters, links, (routerTable.getNumberOfRouters() - 1) * linkTable.getMaxCost());
 		router.initSocket();
-		new ListenerThread(router).start();
-		new NeighborsMonitorThread(router).start();
 
-		router.startRouting();
-		
+		new Thread(new RouterServer(router)).start();
+		new Thread(new RouterClient(router)).start();
 	}
 }

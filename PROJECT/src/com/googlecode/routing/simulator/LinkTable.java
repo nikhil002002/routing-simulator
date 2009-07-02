@@ -47,5 +47,15 @@ public class LinkTable {
 		}
 		return result;
 	}
+	
+	public double getMaxCost() {
+		double dist = 0;
+		for(LinkInfo link : links) {
+			if(link.cost > dist) {
+				dist = link.cost;
+			}
+		}
+		return dist;
+	}
 
 }
