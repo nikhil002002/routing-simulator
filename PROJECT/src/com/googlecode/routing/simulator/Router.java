@@ -1,6 +1,7 @@
 package com.googlecode.routing.simulator;
 
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
@@ -44,6 +45,15 @@ public class Router {
 	public void initSocket() throws SocketException, UnknownHostException {
 		serverSocket = new DatagramSocket(routerInfo.port, routerInfo.ipAddress);
 		System.out.println("Ouvindo em: " + routerInfo.ipAddress + ":" + routerInfo.port);
+	}
+
+	public RouterInfo getAdjacentByIPAndPort(InetAddress inetAddr, int port) {
+		for (RouterInfo info : adjacentRouters) {
+			if (info.ipAddress.equals(inetAddr) && info.port == port) {
+				return info;
+			}
+		}
+		return null;
 	}
 
 	public static byte[] serialize(Map<Long, PathInfo> map) {
