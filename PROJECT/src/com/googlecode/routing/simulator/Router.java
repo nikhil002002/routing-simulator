@@ -16,7 +16,6 @@ import java.util.Map.Entry;
  */
 public class Router {
 
-	public static final int UNAVAILABLE = -1;
 	public static final long SLEEP_TIME = 4000;
 	public final Map<Long, PathInfo> minimumPathTable;
 	public final RouterInfo routerInfo;
@@ -24,6 +23,7 @@ public class Router {
 	public final Set<RouterInfo> adjacentRouters;
 	public Map<Long, Long> lastPing = new HashMap<Long, Long>();
 	private final double networkDiameter;
+	public static final double UNAVAILABLE = Double.MAX_VALUE;
 	
 	public final PrintStream out;
 
@@ -66,7 +66,7 @@ public class Router {
 	public void printDistanceTable() {
 		out.println("| ID |  GATEWAY |  COST  |");
 		for (Entry<Long, PathInfo> entry : minimumPathTable.entrySet()) {
-			out.println("| " + entry.getKey() + " |  " + entry.getValue().gatewayRouterID + " |  " + entry.getValue().cost + "  |");
+			out.println("| " + entry.getKey() + " |  " + entry.getValue().gatewayRouterID + " |  " + (entry.getValue().cost==UNAVAILABLE ? "N/A" : entry.getValue().cost) + "  |");
 		}
 		out.println();
 	}

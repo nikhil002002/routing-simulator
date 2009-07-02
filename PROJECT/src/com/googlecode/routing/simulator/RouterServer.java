@@ -10,6 +10,7 @@ import java.util.Map.Entry;
  */
 public class RouterServer implements Runnable {
 
+	
 	private final Router router;
 
 	public RouterServer(Router router) {
@@ -45,7 +46,7 @@ public class RouterServer implements Runnable {
 					pathToSender = new PathInfo();
 					pathToSender.destinationRouterID = info.id;
 					pathToSender.gatewayRouterID = info.id;
-					double thisCost = Double.MAX_VALUE;
+					double thisCost = Router.UNAVAILABLE;
 					for (LinkInfo linkInfo : router.links) {
 						if (linkInfo.routerAID == router.routerInfo.id || linkInfo.routerBID == router.routerInfo.id) {
 							thisCost = linkInfo.cost;
@@ -74,32 +75,45 @@ public class RouterServer implements Runnable {
 				if (receivedPathInfo.destinationRouterID == router.routerInfo.id) {
 					continue;
 				}
-
+				
 				PathInfo actualPathInfo;
 				synchronized (router.minimumPathTable) {
 					actualPathInfo = router.minimumPathTable.get(id);
 				}
+				
+				if(actualPathInfo == null || (cost + receivedPathInfo.cost != actualPathInfo.cost && receivedPathInfo.cost != actualPathInfo.cost)) {
+					System.out.print("RECEBI QUE ["+ id+ "] AGORA TEM CUSTO "+	(cost + receivedPathInfo.cost)+", EU TINHA COMO ");
+					if(actualPathInfo==null) System.out.println("NULL");
+					else System.out.println(actualPathInfo.cost);
+				}
+				
 				if (actualPathInfo == null) {
 					actualPathInfo = new PathInfo();
 					actualPathInfo.destinationRouterID = receivedPathInfo.destinationRouterID;
-					actualPathInfo.cost = receivedPathInfo.cost + cost;
+					actualPathInfo.cost = receivedPathInfo.cost == Router.UNAVAILABLE? Router.UNAVAILABLE : receivedPathInfo.cost + cost;
 					actualPathInfo.gatewayRouterID = info.id;
 					synchronized (router.minimumPathTable) {
 						router.minimumPathTable.put(id, actualPathInfo);
 					}
 					changed = true;
-				} else if (receivedPathInfo.cost != Double.MAX_VALUE && receivedPathInfo.cost + cost < actualPathInfo.cost) {
+					System.out.println("Acrescentei nÃ³ ["+ receivedPathInfo.destinationRouterID+ "]");
+				} else if(receivedPathInfo.cost == Router.UNAVAILABLE && actualPathInfo.cost != Router.UNAVAILABLE) {
+					System.out.println("RECEBI QUE ["+ id+ "] caiu");
+					actualPathInfo.cost = Router.UNAVAILABLE;
+					changed = true;
+					
+				} else if (receivedPathInfo.cost + cost < actualPathInfo.cost) {
 
 					double previousCost = actualPathInfo.cost;
 					actualPathInfo.cost = receivedPathInfo.cost + cost;
 					actualPathInfo.gatewayRouterID = info.id;
 
-					router.out.println("[" + router.routerInfo.id + "]: Houveram mudanças na minha tabela ");
+					router.out.println("[" + router.routerInfo.id + "]: Houveram mudanï¿½as na minha tabela ");
 					router.out.println("[" + router.routerInfo.id + "]: O custo para " + actualPathInfo.destinationRouterID + " era " + previousCost
 							+ " e agora eh " + (actualPathInfo.cost));
 
 					changed = true;
-				}
+				} 
 			}
 
 			if (changed) {
