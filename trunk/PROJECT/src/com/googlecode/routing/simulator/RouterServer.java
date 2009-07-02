@@ -2,7 +2,6 @@ package com.googlecode.routing.simulator;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.InetAddress;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -30,49 +29,38 @@ public class RouterServer implements Runnable {
 				receivedPacket = receiveData();
 			} catch (IOException e) {
 				e.printStackTrace();
-				return;
+				continue;
 			}
-
-			InetAddress senderIpAddress = receivedPacket.getAddress();
-			int senderPort = receivedPacket.getPort();
-
-			double cost = 0;
-			RouterInfo gateway = null;
 
 			Map<Long, PathInfo> receivedMap = Router.deserialize(receivedPacket.getData());
-			synchronized (router.minimumPathTable) {
 
-				for (RouterInfo r : router.adjacentRouters) {
-
-					// identify the sender
-					if (r.ipAddress.equals(senderIpAddress) && r.port == senderPort) {
-						// Info about the link to the sender
-						PathInfo actualPathInfo = router.minimumPathTable.get(r.id);
-
-						// If there's no link
-						if (actualPathInfo == null) {
-
-							actualPathInfo = new PathInfo();
-							actualPathInfo.destinationRouterID = r.id;
-							actualPathInfo.gatewayRouterID = r.id;
-							actualPathInfo.cost = receivedMap.get(router.routerInfo.id).cost;
-
-							// creates a link
-							router.minimumPathTable.put(r.id, actualPathInfo);
-						}
-						// cost of this link
-						cost = actualPathInfo.cost;
-						// stores the sender for future usage
-						gateway = r;
-
-						System.out.println("[" + router.routerInfo.id + "]: Recebi de " + r.id);
-
-						// Mark PING from the sender
-						router.lastPing.put(r.id, System.currentTimeMillis());
-					}
-				}
-
+			RouterInfo info = router.getAdjacentByIPAndPort(receivedPacket.getAddress(), receivedPacket.getPort());
+			if (info == null) {
+				continue;
 			}
+
+			PathInfo pathToSender;
+			synchronized (router.minimumPathTable) {
+				if (!router.minimumPathTable.containsKey(info.id)) {
+					pathToSender = new PathInfo();
+					pathToSender.destinationRouterID = info.id;
+					pathToSender.gatewayRouterID = info.id;
+					// FIXME: the minimum distance to reach me might not be
+					// through the direct link
+					pathToSender.cost = receivedMap.get(router.routerInfo.id).cost;
+					router.minimumPathTable.put(info.id, pathToSender);
+				} else {
+					pathToSender = router.minimumPathTable.get(info.id);
+				}
+			}
+
+			// cost of this link
+			double cost = pathToSender.cost;
+
+			System.out.println("[" + router.routerInfo.id + "]: Recebi de " + info.id);
+
+			updatePingTable(info.id);
+
 			for (Long id : receivedMap.keySet()) {
 
 				PathInfo receivedPathInfo = receivedMap.get(id);
@@ -86,9 +74,9 @@ public class RouterServer implements Runnable {
 						continue;
 
 					// reverse to have the sender as the destination router
-					receivedPathInfo.destinationRouterID = gateway.id;
+					receivedPathInfo.destinationRouterID = info.id;
 					// reverse to have the sender as the gateway
-					receivedPathInfo.gatewayRouterID = gateway.id;
+					receivedPathInfo.gatewayRouterID = info.id;
 				}
 
 				// If i don't have a link to this node, or the availability is
@@ -106,7 +94,7 @@ public class RouterServer implements Runnable {
 
 					if (receivedPathInfo.cost == Router.UNAVAILABLE && actualPathInfo.cost != Router.UNAVAILABLE) {
 						actualPathInfo.cost = Router.UNAVAILABLE;
-						System.out.println("Fui avisado pelo roteador [" + gateway.id + "] que o roteador [" + actualPathInfo.destinationRouterID
+						System.out.println("Fui avisado pelo roteador [" + info.id + "] que o roteador [" + actualPathInfo.destinationRouterID
 								+ "] estah indisponivel");
 					} else if (actualPathInfo.cost != Router.UNAVAILABLE) {
 						actualPathInfo.cost = receivedPathInfo.cost + cost;
@@ -118,7 +106,7 @@ public class RouterServer implements Runnable {
 								+ previousCost + " e agora eh " + (actualPathInfo.cost));
 
 					}
-					actualPathInfo.gatewayRouterID = gateway.id;
+					actualPathInfo.gatewayRouterID = info.id;
 
 					router.minimumPathTable.put(id, actualPathInfo);
 					printTable();
@@ -132,6 +120,12 @@ public class RouterServer implements Runnable {
 		DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 		router.serverSocket.receive(receivePacket);
 		return receivePacket;
+	}
+
+	private void updatePingTable(long routerID) {
+		synchronized (router.lastPing) {
+			router.lastPing.put(routerID, System.currentTimeMillis());
+		}
 	}
 
 	private void printTable() {
