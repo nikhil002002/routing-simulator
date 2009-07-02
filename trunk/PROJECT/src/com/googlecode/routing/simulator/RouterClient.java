@@ -45,7 +45,7 @@ public class RouterClient implements Runnable {
 
 		byte[] byteMap;
 		synchronized (router.minimumPathTable) {
-			byteMap = Router.serialize(router.minimumPathTable);
+			byteMap = Router.serialize(router.getDistanceTable());
 		}
 		for (RouterInfo routerInfo : router.adjacentRouters) {
 			DatagramPacket sendPacket = new DatagramPacket(byteMap, byteMap.length, routerInfo.ipAddress, routerInfo.port);
@@ -67,13 +67,13 @@ public class RouterClient implements Runnable {
 		for (Entry<Long, Long> e : set) {
 			if (e.getValue() > 0 && currentTime - e.getValue() > 5 * Router.SLEEP_TIME) {
 				synchronized (router.minimumPathTable) {
-					if (router.minimumPathTable.get(e.getKey()).cost != Router.UNAVAILABLE) {
-						router.minimumPathTable.get(e.getKey()).cost = Router.UNAVAILABLE;
+					if (router.getDistanceTable().get(e.getKey()).cost != Router.UNAVAILABLE) {
+						router.getDistanceTable().get(e.getKey()).cost = Router.UNAVAILABLE;
 						e.setValue(0L);
 						router.out.println("[" + router.routerInfo.id + "] Timeout para resposta do roteador [" + e.getKey()
 								+ "] atingido, marcando como indisponivel");
 						changed = true;
-						router.disableUnreachableRouters(e.getKey());
+//						router.disableUnreachableRouters(e.getKey());
 					}
 				}
 			}

@@ -2,6 +2,7 @@ package com.googlecode.routing.simulator;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -42,14 +43,13 @@ public class Main {
 		LinkTable linkTable = new LinkTable(ENLACES_CONFIG_DIR);
 		linkTable.parseConfigFile();
 
-		Set<LinkInfo> links = linkTable.getLinksForRouter(id);
+		Map<Long, LinkInfo> links = linkTable.getLinksForRouter(id);
 		Set<RouterInfo> adjacentRouters = new HashSet<RouterInfo>();
-		for (LinkInfo info : links) {
+		for (LinkInfo info : links.values()) {
 			adjacentRouters.add(routerTable.getInfo(info.routerAID == id ? info.routerBID : info.routerAID));
 		}
 
-		Router router = new Router(currentRouterInfo, adjacentRouters, links, System.out, (routerTable.getNumberOfRouters() - 1)
-				* linkTable.getMaxCost());
+		Router router = new Router(currentRouterInfo, adjacentRouters, links, System.out, linkTable.getCostsSum());
 		router.initSocket();
 
 		new Thread(new RouterServer(router)).start();
