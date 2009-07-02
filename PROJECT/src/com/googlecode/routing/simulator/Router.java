@@ -74,25 +74,31 @@ public class Router {
 		
 		for(RouterInfo r: adjacentRouters) {
 			if(r.ipAddress.equals(senderIpAddress) && r.port == senderPort) {
-				cost = minimumPathTable.get(r.id).cost;
+				PathInfo actualPathInfo = minimumPathTable.get(r.id);
+				if(actualPathInfo == null) {
+					actualPathInfo = new PathInfo();
+					actualPathInfo.destinationRouterID = r.id;
+					actualPathInfo.gatewayRouterID = r.id;
+					actualPathInfo.cost = receivedMap.get(
+							this.routerInfo.id)
+							.cost;
+					
+					minimumPathTable.put(r.id, actualPathInfo);
+				}
+				cost = actualPathInfo.cost;
+					
 				gateway = r;
 				System.out.println("["+this.routerInfo.id + "]: Recebi de "+r.id);
-				
-//				if(cost ==  UNAVAILABLE) {
-//					cost = receivedMap.get(this.routerInfo.id).cost;
-//					minimumPathTable.get(r.id).cost = cost;
-//				}
 				
 				lastPing.put(r.id, System.currentTimeMillis());
 				
 			}
 		}
 		
-		
 		for(Long id: receivedMap.keySet()) {
 			PathInfo receivedPathInfo = receivedMap.get(id);
 			PathInfo actualPathInfo = minimumPathTable.get(id);
-			if(actualPathInfo == null || receivedPathInfo.cost + cost < actualPathInfo.cost) {
+			if(actualPathInfo == null || receivedPathInfo.cost + cost < actualPathInfo.cost || receivedPathInfo.cost == UNAVAILABLE ^ actualPathInfo.cost == UNAVAILABLE) {
 				if(actualPathInfo == null) { 
 					actualPathInfo = new PathInfo();
 					actualPathInfo.destinationRouterID = receivedPathInfo.destinationRouterID;
@@ -100,22 +106,26 @@ public class Router {
 				System.out.println("["+this.routerInfo.id + "]: Houveram mudanças na minha tabela ");
 				System.out.println("["+this.routerInfo.id + "]: O custo para "+actualPathInfo.destinationRouterID+ " era "+actualPathInfo.cost +
 						" e agora eh "+ (receivedPathInfo.cost + cost));
-				
-				actualPathInfo.cost = receivedPathInfo.cost + cost;
+				if(receivedPathInfo.cost == UNAVAILABLE) {
+					actualPathInfo.cost = UNAVAILABLE;
+					System.out.println("Fui avisado pelo roteador ["+gateway.id+"] que o roteador ["+actualPathInfo.destinationRouterID + "] estah indisponivel" );
+				} else {
+					actualPathInfo.cost = receivedPathInfo.cost + cost;
+				}
 				actualPathInfo.gatewayRouterID = gateway.id;
 				
 				minimumPathTable.put(id, actualPathInfo);
 			}
 		}
 		
-//		for (Entry<Long,Long> e : lastPing.entrySet()) {
-//			if(e.getValue() > 5*SLEEP_TIME) {
-//				e.setValue((long) UNAVAILABLE);
-//				PathInfo actualPathInfo = minimumPathTable.get(e.getKey());
-//				actualPathInfo.cost =  UNAVAILABLE;
-//			}
-//			
-//		}
+		
+		for (Entry<Long,Long> e : lastPing.entrySet()) {
+			if(System.currentTimeMillis() - e.getValue() > 5*SLEEP_TIME && minimumPathTable.get(e.getKey()).cost != UNAVAILABLE) {
+				minimumPathTable.get(e.getKey()).cost = UNAVAILABLE;
+				System.out.println("["+this.routerInfo.id+"] Timeout para resposta do roteador ["+e.getKey() + "] atingido, marcando como indisponivel" );
+			}
+			
+		}
 		
 		
 	}
