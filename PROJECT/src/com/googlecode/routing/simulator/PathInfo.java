@@ -10,6 +10,16 @@ public class PathInfo {
 	public long gatewayRouterID;
 
 	public double cost;
+	
+	public PathInfo() {
+		
+	}
+	
+	public PathInfo(PathInfo info) {
+		this.destinationRouterID = info.destinationRouterID;
+		this.gatewayRouterID = info.gatewayRouterID;
+		this.cost = info.cost;
+	}
 
 	/**
 	 * {@inheritDoc}
