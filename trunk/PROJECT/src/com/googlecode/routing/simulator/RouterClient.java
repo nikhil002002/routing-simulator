@@ -79,7 +79,14 @@ public class RouterClient implements Runnable {
 							}
 						}
 
-						router.relaxEdges(id);
+						for(PathInfo path : router.minimumPathTable.get(id).values()) {
+							path.cost = Router.INFINITY;
+							path.gatewayRouterID = -1;
+						}
+
+						for (Long entry : router.minimumPathTable.keySet()) {
+							router.relaxEdges(entry);
+						}
 
 						router.out.println("[" + router.routerInfo.id + "] Timeout para resposta do roteador [" + id
 								+ "] atingido, marcando como indisponivel");

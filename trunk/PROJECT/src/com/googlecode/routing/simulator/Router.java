@@ -8,7 +8,6 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.Map.Entry;
 
 /**
  * @author Renato Miceli
@@ -39,14 +38,13 @@ public class Router {
 		this.out = out;
 
 		Map<Long, PathInfo> distanceVector = new HashMap<Long, PathInfo>();
-		// for (LinkInfo info : links.values()) {
-		// PathInfo path = new PathInfo();
-		// path.cost = info.cost;
-		// path.destinationRouterID = (info.routerAID == routerInfo.id) ?
-		// info.routerBID : info.routerAID;
-		// path.gatewayRouterID = path.destinationRouterID;
-		// distanceVector.put(path.destinationRouterID, path);
-		// }
+		for (LinkInfo info : links.values()) {
+			PathInfo path = new PathInfo();
+			path.cost = info.cost;
+			path.destinationRouterID = (info.routerAID == routerInfo.id) ? info.routerBID : info.routerAID;
+			path.gatewayRouterID = path.destinationRouterID;
+			distanceVector.put(path.destinationRouterID, path);
+		}
 		PathInfo pathToMyself = new PathInfo();
 		pathToMyself.cost = 0;
 		pathToMyself.destinationRouterID = routerInfo.id;
@@ -77,81 +75,32 @@ public class Router {
 
 	public boolean relaxEdges(long changedVectorRouterID) {
 
+		boolean changed = false;
+
 		Map<Long, PathInfo> receivedMap = minimumPathTable.get(changedVectorRouterID);
 		Map<Long, PathInfo> myDistanceTable = getDistanceTable();
 
 		PathInfo pathFromMeToDistanceVectorOwner = myDistanceTable.get(changedVectorRouterID);
-		if (pathFromMeToDistanceVectorOwner == null) {
-			pathFromMeToDistanceVectorOwner = new PathInfo();
+		if (lastPing.containsKey(changedVectorRouterID) && lastPing.get(changedVectorRouterID) > 0 && links.containsKey(changedVectorRouterID)
+				&& pathFromMeToDistanceVectorOwner.cost > links.get(changedVectorRouterID).cost) {
 			pathFromMeToDistanceVectorOwner.cost = links.get(changedVectorRouterID).cost;
 			pathFromMeToDistanceVectorOwner.gatewayRouterID = changedVectorRouterID;
-			pathFromMeToDistanceVectorOwner.destinationRouterID = changedVectorRouterID;
-			myDistanceTable.put(changedVectorRouterID, pathFromMeToDistanceVectorOwner);
-		} else if (pathFromMeToDistanceVectorOwner.cost == Router.INFINITY) {
-			pathFromMeToDistanceVectorOwner.cost = links.get(changedVectorRouterID).cost;
+			changed = true;
 		}
-
-		Map<Long, PathInfo> minDistances = new HashMap<Long, PathInfo>();
-		for (PathInfo info : myDistanceTable.values()) {
-			PathInfo newInfo = new PathInfo();
-			newInfo.cost = links.containsKey(info.destinationRouterID) ? links.get(info.destinationRouterID).cost : Router.INFINITY;
-			newInfo.gatewayRouterID = -1;
-			newInfo.destinationRouterID = info.destinationRouterID;
-			minDistances.put(newInfo.destinationRouterID, newInfo);
-		}
-		PathInfo myInfo = new PathInfo();
-		myInfo.cost = 0;
-		myInfo.gatewayRouterID = changedVectorRouterID;
-		myInfo.destinationRouterID = changedVectorRouterID;
-		minDistances.put(myInfo.destinationRouterID, myInfo);
-		
-
-		System.out.println(myDistanceTable);
-		System.out.println(minDistances);
 
 		for (PathInfo receivedPath : receivedMap.values()) {
-			if (receivedPath.destinationRouterID == changedVectorRouterID) {
-				continue;
-			}
-			if (!minDistances.containsKey(receivedPath.destinationRouterID)) {
+			if (!myDistanceTable.containsKey(receivedPath.destinationRouterID)) {
 				PathInfo newInfo = new PathInfo();
 				newInfo.destinationRouterID = receivedPath.destinationRouterID;
 				newInfo.gatewayRouterID = changedVectorRouterID;
 				newInfo.cost = receivedPath.cost + pathFromMeToDistanceVectorOwner.cost;
-				minDistances.put(newInfo.destinationRouterID, newInfo);
+				myDistanceTable.put(newInfo.destinationRouterID, newInfo);
+				changed = true;
 			} else {
-				PathInfo pathFromMeToDestination = minDistances.get(receivedPath.destinationRouterID);
+				PathInfo pathFromMeToDestination = myDistanceTable.get(receivedPath.destinationRouterID);
 				if (pathFromMeToDestination.cost > receivedPath.cost + pathFromMeToDistanceVectorOwner.cost) {
 					pathFromMeToDestination.cost = receivedPath.cost + pathFromMeToDistanceVectorOwner.cost;
 					pathFromMeToDestination.gatewayRouterID = changedVectorRouterID;
-				}
-			}
-		}
-		
-		for (Entry<Long, PathInfo> entry : minDistances.entrySet()) {
-			if(links.containsKey(entry.getKey())) {
-				LinkInfo link = links.get(entry.getKey());
-				PathInfo path = entry.getValue();
-				if(link.cost < path.cost) {
-					path.cost = link.cost;
-					path.gatewayRouterID = (link.routerAID == changedVectorRouterID) ? link.routerBID : link.routerAID;
-				}
-			}
-		}
-
-		System.out.println(minDistances);
-
-		boolean changed = false;
-		for (Entry<Long, PathInfo> entry : minDistances.entrySet()) {
-			System.out.println(entry.getValue());
-			if (!myDistanceTable.containsKey(entry.getKey())) {
-				myDistanceTable.put(entry.getKey(), entry.getValue());
-				changed = true;
-			} else {
-				PathInfo oldPath = myDistanceTable.get(entry.getKey());
-				if (oldPath.cost != entry.getValue().cost || oldPath.gatewayRouterID != entry.getValue().gatewayRouterID) {
-					oldPath.cost = entry.getValue().cost;
-					oldPath.gatewayRouterID = entry.getValue().gatewayRouterID;
 					changed = true;
 				}
 			}
