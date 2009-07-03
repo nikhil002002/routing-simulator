@@ -6,14 +6,29 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * Initializes the environment and execute the router algorithm
+ * @author Felipe Ribeiro
+ * @author Michelly Guedes
  * @author Renato Miceli
  */
 public class Main {
+	/**
+	 * Path to the file that contains the map of connections
+	 */
+	public static final String ENLACES_CONFIG_DIR = "../resources/enlaces.config";
 
-	public static final String ENLACES_CONFIG_DIR = "resources/enlaces.config";
+	/**
+	 * Path to the file that contains the settings (id, ip and port) to run the router
+	 */
+	public static final String ROTEADOR_CONFIG_DIR = "../resources/roteador.config";
 
-	public static final String ROTEADOR_CONFIG_DIR = "resources/roteador.config";
-
+	/**
+	 * Executes the main routine
+	 * 
+	 * @param args The id of the router that is being bootstrapped (passed on the console) 
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
 	public static void main(String[] args) throws IOException, InterruptedException {
 
 		if (args.length < 1) {

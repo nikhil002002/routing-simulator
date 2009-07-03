@@ -5,12 +5,24 @@ import java.net.DatagramPacket;
 import java.util.Map;
 
 /**
+ * Implements the routine of the router that receives messages from the neighbors and update the local information
+ * 
+ * @author Felipe Ribeiro
+ * @author Michelly Guedes
  * @author Renato Miceli
  */
 public class RouterServer implements Runnable {
 
+	/**
+	 * The router that owns this entity
+	 */
 	private final Router router;
 
+	/**
+	 * Initializes the entity for the given Router
+	 * 
+	 * @param router
+	 */
 	public RouterServer(Router router) {
 		this.router = router;
 	}
@@ -56,6 +68,12 @@ public class RouterServer implements Runnable {
 
 	}
 
+	/**
+	 * Listen to the port and capture the packets
+	 * 
+	 * @return A network packet
+	 * @throws IOException
+	 */
 	private DatagramPacket receiveData() throws IOException {
 		byte[] receiveData = new byte[1024];
 		DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
@@ -63,6 +81,11 @@ public class RouterServer implements Runnable {
 		return receivePacket;
 	}
 
+	/**
+	 * Updates the timestamp of the last message from a router
+	 * 
+	 * @param routerID
+	 */
 	private void updatePingTable(long routerID) {
 		synchronized (router.lastPing) {
 			router.lastPing.put(routerID, System.currentTimeMillis());

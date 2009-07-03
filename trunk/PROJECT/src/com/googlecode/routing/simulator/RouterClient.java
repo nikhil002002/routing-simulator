@@ -8,12 +8,24 @@ import java.util.Set;
 import java.util.Map.Entry;
 
 /**
+ * Implements the client side of the router that sends messages to other routers
+ * that are directly connected to this one
+ *  
+ * @author Felipe Ribeiro
+ * @author Michelly Guedes
  * @author Renato Miceli
  */
 public class RouterClient implements Runnable {
 
+	/**
+	 * The router that owns this entity
+	 */
 	private final Router router;
 
+	/**
+	 * Initialize the client attributing an owner
+	 * @param router
+	 */
 	public RouterClient(Router router) {
 		this.router = router;
 
@@ -41,6 +53,10 @@ public class RouterClient implements Runnable {
 		}
 	}
 
+	/**
+	 * Sends the table of distance to the neighbors
+	 * @throws IOException
+	 */
 	private void sendDistanceVectorToNeighbors() throws IOException {
 
 		byte[] byteMap;
@@ -53,6 +69,11 @@ public class RouterClient implements Runnable {
 		}
 	}
 
+	/**
+	 * Checks if a neighbor has got in touch before the timeout, if not, mark as unavailable
+	 * 
+	 * @throws IOException
+	 */
 	private void checkNeighborsTimeout() throws IOException {
 
 		long currentTime = System.currentTimeMillis();
