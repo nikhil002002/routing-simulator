@@ -6,8 +6,10 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 
 /**
  * @author Renato Miceli
@@ -75,17 +77,25 @@ public class Router {
 
 	public boolean relaxEdges(long changedVectorRouterID) {
 
-		boolean changed = false;
+		Map<Long, PathInfo> myDistanceTable = getDistanceTable();
+		Map<Long, PathInfo> beforeList = new HashMap<Long, PathInfo>();
+		for (Entry<Long, PathInfo> entry : myDistanceTable.entrySet()) {
+			beforeList.put(entry.getKey(), new PathInfo(entry.getValue()));
+		}
+
+		for (PathInfo path : myDistanceTable.values()) {
+			if (path.gatewayRouterID == changedVectorRouterID && path.destinationRouterID != routerInfo.id) {
+				path.cost = Router.INFINITY;
+			}
+		}
 
 		Map<Long, PathInfo> receivedMap = minimumPathTable.get(changedVectorRouterID);
-		Map<Long, PathInfo> myDistanceTable = getDistanceTable();
 
 		PathInfo pathFromMeToDistanceVectorOwner = myDistanceTable.get(changedVectorRouterID);
 		if (lastPing.containsKey(changedVectorRouterID) && lastPing.get(changedVectorRouterID) > 0 && links.containsKey(changedVectorRouterID)
 				&& pathFromMeToDistanceVectorOwner.cost > links.get(changedVectorRouterID).cost) {
 			pathFromMeToDistanceVectorOwner.cost = links.get(changedVectorRouterID).cost;
 			pathFromMeToDistanceVectorOwner.gatewayRouterID = changedVectorRouterID;
-			changed = true;
 		}
 
 		for (PathInfo receivedPath : receivedMap.values()) {
@@ -95,18 +105,24 @@ public class Router {
 				newInfo.gatewayRouterID = changedVectorRouterID;
 				newInfo.cost = receivedPath.cost + pathFromMeToDistanceVectorOwner.cost;
 				myDistanceTable.put(newInfo.destinationRouterID, newInfo);
-				changed = true;
+				if (newInfo.cost > maxCountToInfinity) {
+					newInfo.cost = maxCountToInfinity;
+				}
 			} else {
 				PathInfo pathFromMeToDestination = myDistanceTable.get(receivedPath.destinationRouterID);
 				if (pathFromMeToDestination.cost > receivedPath.cost + pathFromMeToDistanceVectorOwner.cost) {
 					pathFromMeToDestination.cost = receivedPath.cost + pathFromMeToDistanceVectorOwner.cost;
 					pathFromMeToDestination.gatewayRouterID = changedVectorRouterID;
-					changed = true;
+					if (pathFromMeToDestination.cost > maxCountToInfinity) {
+						pathFromMeToDestination.cost = maxCountToInfinity;
+					}
 				}
 			}
 		}
 
-		return changed;
+		Set<PathInfo> currentSet = new HashSet<PathInfo>(myDistanceTable.values());
+		Set<PathInfo> previousSet = new HashSet<PathInfo>(beforeList.values());
+		return !currentSet.containsAll(previousSet) || !previousSet.containsAll(currentSet);
 	}
 
 	public void printDistanceTable() {
