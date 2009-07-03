@@ -42,7 +42,10 @@ public class RouterServer implements Runnable {
 				router.minimumPathTable.put(info.id, receivedMap);
 			}
 
-			boolean changed = relaxEdges(info.id);
+			boolean changed;
+			synchronized (router.minimumPathTable) {
+				changed = router.relaxEdges(info.id);
+			}
 
 			updatePingTable(info.id);
 
@@ -51,39 +54,6 @@ public class RouterServer implements Runnable {
 			}
 		}
 
-	}
-
-	private boolean relaxEdges(long changedVectorRouterID) {
-		boolean changed = false;
-
-		synchronized (router.minimumPathTable) {
-			Map<Long, PathInfo> receivedMap = router.minimumPathTable.get(changedVectorRouterID);
-			Map<Long, PathInfo> myDistanceTable = router.getDistanceTable();
-
-			PathInfo pathToAdjacent = myDistanceTable.get(changedVectorRouterID);
-			if (pathToAdjacent.cost == Router.UNAVAILABLE) {
-				pathToAdjacent.cost = router.links.get(changedVectorRouterID).cost;
-			}
-
-			for (PathInfo receivedInfo : receivedMap.values()) {
-				if (!myDistanceTable.containsKey(receivedInfo.destinationRouterID)) {
-					PathInfo newInfo = new PathInfo();
-					newInfo.destinationRouterID = receivedInfo.destinationRouterID;
-					newInfo.gatewayRouterID = changedVectorRouterID;
-					newInfo.cost = receivedInfo.cost + pathToAdjacent.cost;
-					myDistanceTable.put(newInfo.destinationRouterID, newInfo);
-					changed = true;
-				} else {
-					PathInfo newInfo = myDistanceTable.get(receivedInfo.destinationRouterID);
-					if (newInfo.cost > receivedInfo.cost + pathToAdjacent.cost) {
-						newInfo.cost = receivedInfo.cost + pathToAdjacent.cost;
-						newInfo.gatewayRouterID = changedVectorRouterID;
-						changed = true;
-					}
-				}
-			}
-		}
-		return changed;
 	}
 
 	private DatagramPacket receiveData() throws IOException {

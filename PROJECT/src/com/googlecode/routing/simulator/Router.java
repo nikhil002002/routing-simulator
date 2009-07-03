@@ -21,7 +21,7 @@ public class Router {
 	public final Set<RouterInfo> adjacentRouters;
 	public Map<Long, Long> lastPing = new HashMap<Long, Long>();
 	public final double maxCountToInfinity;
-	public static final double UNAVAILABLE = Double.MAX_VALUE;
+	public static final double INFINITY = Double.MAX_VALUE;
 
 	public final PrintStream out;
 
@@ -72,21 +72,41 @@ public class Router {
 		return null;
 	}
 
-	// FIXME
-	// public void disableUnreachableRouters(long id) {
-	// synchronized (minimumPathTable) {
-	// for (PathInfo pathInfo : minimumPathTable.values()) {
-	// if (pathInfo.gatewayRouterID == id) {
-	// pathInfo.cost = Router.UNAVAILABLE;
-	// }
-	// }
-	// }
-	// }
+	public boolean relaxEdges(long changedVectorRouterID) {
+
+		boolean changed = false;
+		Map<Long, PathInfo> receivedMap = minimumPathTable.get(changedVectorRouterID);
+		Map<Long, PathInfo> myDistanceTable = getDistanceTable();
+
+		PathInfo pathToAdjacent = myDistanceTable.get(changedVectorRouterID);
+		if (pathToAdjacent.cost == Router.INFINITY) {
+			pathToAdjacent.cost = links.get(changedVectorRouterID).cost;
+		}
+
+		for (PathInfo receivedInfo : receivedMap.values()) {
+			if (!myDistanceTable.containsKey(receivedInfo.destinationRouterID)) {
+				PathInfo newInfo = new PathInfo();
+				newInfo.destinationRouterID = receivedInfo.destinationRouterID;
+				newInfo.gatewayRouterID = changedVectorRouterID;
+				newInfo.cost = receivedInfo.cost + pathToAdjacent.cost;
+				myDistanceTable.put(newInfo.destinationRouterID, newInfo);
+				changed = true;
+			} else {
+				PathInfo newInfo = myDistanceTable.get(receivedInfo.destinationRouterID);
+				if (newInfo.cost > receivedInfo.cost + pathToAdjacent.cost) {
+					newInfo.cost = receivedInfo.cost + pathToAdjacent.cost;
+					newInfo.gatewayRouterID = changedVectorRouterID;
+					changed = true;
+				}
+			}
+		}
+		return changed;
+	}
 
 	public void printDistanceTable() {
 		out.println("| ID |  COST  |  GATEWAY |");
 		for (PathInfo info : minimumPathTable.get(routerInfo.id).values()) {
-			out.println("|  " + info.destinationRouterID + " |   " + (info.cost == UNAVAILABLE ? "N/A" : info.cost) + "  |     " + info.gatewayRouterID
+			out.println("|  " + info.destinationRouterID + " |   " + (info.cost == INFINITY ? "N/A" : info.cost) + "  |     " + info.gatewayRouterID
 					+ "    |");
 		}
 		out.println();
