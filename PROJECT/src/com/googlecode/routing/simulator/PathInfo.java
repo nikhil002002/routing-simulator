@@ -1,15 +1,30 @@
 package com.googlecode.routing.simulator;
 
 /**
+ * Contains the information about how to reach another router
+ * 
+ * @author Felipe Ribeiro
+ * @author Michelly Guedes
  * @author Renato Miceli
  */
 public class PathInfo {
 
+	/**
+	 * The id of the destination router
+	 */
 	public long destinationRouterID;
 
+	/**
+	 * The id of the gateway router (i.e. the one to which I should send the package to reach the 
+	 * @link{destinationRouterId} with the lowest known cost
+	 */
 	public long gatewayRouterID;
 
+	/**
+	 * The cost to reach the destinationRouterId from the actual router
+	 */
 	public double cost;
+
 
 	public PathInfo() {
 
@@ -29,6 +44,11 @@ public class PathInfo {
 		return destinationRouterID + ":" + gatewayRouterID + ":" + cost;
 	}
 
+	/**
+	 * Parses a string to create a PathInfo from a serialized source
+	 * @param A string that represents a PathInfo in a serialized way (destinationRouterId:gatewayRouterId:cost)
+	 * @return the PathInfo object with the data obtained from the string
+	 */
 	public static PathInfo buildPathInfo(String s) {
 		String[] strLine = s.split(":");
 		PathInfo info = new PathInfo();

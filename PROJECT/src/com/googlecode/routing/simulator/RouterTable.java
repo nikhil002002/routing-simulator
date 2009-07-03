@@ -9,19 +9,39 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * Manages the list of routers available on the network
+ * 
+ * @author Felipe Ribeiro
+ * @author Michelly Guedes
  * @author Renato Miceli
  */
 public class RouterTable {
 
+	/**
+	 * Path to the file that contains the configuration of the routers
+	 */
 	private final String routerConfigFilePath;
 
+	/**
+	 * Map with the id and metadata of each router
+	 */
 	private final Map<Long, RouterInfo> routers;
 
+	/**
+	 * Initialize the entity passing the path to the file containing the settings
+	 * 
+	 * @param routerConfigFilePath
+	 */
 	public RouterTable(String routerConfigFilePath) {
 		this.routerConfigFilePath = routerConfigFilePath;
 		this.routers = new HashMap<Long, RouterInfo>();
 	}
 
+	/**
+	 * Parses the configuration file and mounts the table
+	 * 
+	 * @throws IOException
+	 */
 	public void parseConfigFile() throws IOException {
 		BufferedReader buf = new BufferedReader(new InputStreamReader(new FileInputStream(routerConfigFilePath)));
 		String line;
@@ -42,6 +62,12 @@ public class RouterTable {
 		buf.close();
 	}
 
+	/**
+	 * Returns the info of the router mapped with the given id
+	 * 
+	 * @param id
+	 * @return the metadata of the router
+	 */
 	public RouterInfo getInfo(long id) {
 		return routers.get(id);
 	}
