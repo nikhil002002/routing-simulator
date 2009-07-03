@@ -67,23 +67,23 @@ public class RouterClient implements Runnable {
 			Map<Long, PathInfo> myDistanceVector = router.getDistanceTable();
 			for (Entry<Long, Long> e : set) {
 				if (e.getValue() > 0 && currentTime - e.getValue() > 5 * Router.SLEEP_TIME) {
-					if (myDistanceVector.get(e.getKey()).cost != Router.INFINITY) {
-						myDistanceVector.get(e.getKey()).cost = Router.INFINITY;
+					Long id = e.getKey();
+					if (myDistanceVector.get(id).cost != Router.INFINITY) {
+						myDistanceVector.get(id).cost = Router.INFINITY;
 						e.setValue(0L);
 
 						for (PathInfo info : myDistanceVector.values()) {
-							if (info.gatewayRouterID == e.getKey()) {
+							if (info.gatewayRouterID == id) {
 								info.gatewayRouterID = -1;
 								info.cost = Router.INFINITY;
 							}
 						}
 
-						for (Long id : myDistanceVector.keySet()) {
-							router.relaxEdges(id);
-						}
+						router.relaxEdges(id);
 
-						router.out.println("[" + router.routerInfo.id + "] Timeout para resposta do roteador [" + e.getKey()
+						router.out.println("[" + router.routerInfo.id + "] Timeout para resposta do roteador [" + id
 								+ "] atingido, marcando como indisponivel");
+
 						changed = true;
 					}
 				}

@@ -38,6 +38,8 @@ public class RouterServer implements Runnable {
 				continue;
 			}
 
+			updatePingTable(info.id);
+
 			synchronized (router.minimumPathTable) {
 				router.minimumPathTable.put(info.id, receivedMap);
 			}
@@ -46,8 +48,6 @@ public class RouterServer implements Runnable {
 			synchronized (router.minimumPathTable) {
 				changed = router.relaxEdges(info.id);
 			}
-
-			updatePingTable(info.id);
 
 			if (changed) {
 				router.printDistanceTable();
