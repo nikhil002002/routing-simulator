@@ -3,6 +3,7 @@ package com.googlecode.routing.simulator;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
@@ -31,7 +32,6 @@ public class RouterClient implements Runnable {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			
 
 			try {
 				Thread.sleep(Router.SLEEP_TIME);
@@ -61,14 +61,27 @@ public class RouterClient implements Runnable {
 		synchronized (router.lastPing) {
 			set = new HashSet<Entry<Long, Long>>(router.lastPing.entrySet());
 		}
-		
+
 		boolean changed = false;
-		for (Entry<Long, Long> e : set) {
-			if (e.getValue() > 0 && currentTime - e.getValue() > 5 * Router.SLEEP_TIME) {
-				synchronized (router.minimumPathTable) {
-					if (router.getDistanceTable().get(e.getKey()).cost != Router.UNAVAILABLE) {
-						router.getDistanceTable().get(e.getKey()).cost = Router.UNAVAILABLE;
+		synchronized (router.minimumPathTable) {
+			Map<Long, PathInfo> myDistanceVector = router.getDistanceTable();
+			for (Entry<Long, Long> e : set) {
+				if (e.getValue() > 0 && currentTime - e.getValue() > 5 * Router.SLEEP_TIME) {
+					if (myDistanceVector.get(e.getKey()).cost != Router.INFINITY) {
+						myDistanceVector.get(e.getKey()).cost = Router.INFINITY;
 						e.setValue(0L);
+
+						for (PathInfo info : myDistanceVector.values()) {
+							if (info.gatewayRouterID == e.getKey()) {
+								info.gatewayRouterID = -1;
+								info.cost = Router.INFINITY;
+							}
+						}
+
+						for (Long id : myDistanceVector.keySet()) {
+							router.relaxEdges(id);
+						}
+
 						router.out.println("[" + router.routerInfo.id + "] Timeout para resposta do roteador [" + e.getKey()
 								+ "] atingido, marcando como indisponivel");
 						changed = true;
