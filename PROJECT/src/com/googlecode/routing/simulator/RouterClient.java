@@ -49,7 +49,6 @@ public class RouterClient implements Runnable {
 		}
 		for (RouterInfo routerInfo : router.adjacentRouters) {
 			DatagramPacket sendPacket = new DatagramPacket(byteMap, byteMap.length, routerInfo.ipAddress, routerInfo.port);
-//			router.out.println("Enviando para " + routerInfo.ipAddress + ":" + routerInfo.port);
 			router.serverSocket.send(sendPacket);
 		}
 	}
@@ -73,7 +72,6 @@ public class RouterClient implements Runnable {
 						router.out.println("[" + router.routerInfo.id + "] Timeout para resposta do roteador [" + e.getKey()
 								+ "] atingido, marcando como indisponivel");
 						changed = true;
-//						router.disableUnreachableRouters(e.getKey());
 					}
 				}
 			}
